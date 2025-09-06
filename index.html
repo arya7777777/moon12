@@ -1,0 +1,923 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>I Miss You Nannu</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Caveat:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --accent-1: #ff90aa;
+      --accent-2: #9cebfc;
+      --deep: #5451ad;
+      --bg-1: #93acf0;
+      --bg-2: #fffaf3;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body {
+      margin: 0;
+      font-family: 'Caveat', Arial, cursive;
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: #58508d;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* main content initially hidden until envelope is closed */
+    #main-content{
+      opacity: 0;
+      transform: translateY(16px) scale(.995);
+      transition: opacity .8s cubic-bezier(.2,.9,.25,1), transform .8s cubic-bezier(.2,.9,.25,1);
+      pointer-events: none;
+      visibility: hidden;
+    }
+    #main-content.revealed{
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 36px auto;
+      padding: 22px;
+      position: relative;
+      z-index: 1;
+      background: rgba(255,255,255,0.92);
+      box-shadow: 0 18px 40px rgba(140,90,180,0.08);
+      border-radius: 20px;
+    }
+
+    /* ENVELOPE OVERLAY (shown on page load) */
+    .overlay {
+      position: fixed; 
+      inset:0; 
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: linear-gradient(180deg, rgba(10,10,20,0.10), rgba(10,10,20,0.12));
+      z-index: 9999; 
+      transition: opacity .6s ease, transform .6s ease;
+      backdrop-filter: blur(6px);
+    }
+    .overlay.hidden{
+      opacity:0; 
+      pointer-events:none; 
+      transform: translateY(-8px)
+    }
+    .welcome-screen{
+      text-align:center; 
+      width:100%; 
+      max-width:420px; 
+      padding:28px; 
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,248,252,0.9));
+      box-shadow: 0 10px 40px rgba(120,60,140,0.12);
+    }
+
+    /* image placeholders */
+    .img-placeholder{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,0.5));
+      border-radius: 12px; 
+      padding:10px; 
+      color: #5c4f86;
+      font-size: 0.95rem; 
+      box-shadow: 0 6px 18px rgba(120,80,160,0.06);
+      flex-direction: column;
+    }
+    .img-placeholder.small{width:90px;height:90px}
+    .img-placeholder.medium{width:120px;height:120px}
+    .img-placeholder.large{width:220px;height:140px}
+    .img-placeholder svg{opacity:.85}
+    .img-placeholder .label{display:block;font-size:.78rem;color:#7b6aa5;margin-top:6px}
+
+    /* envelope */
+    .envelope-wrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+    .envelope{
+      width:150px; 
+      height:100px; 
+      position:relative; 
+      perspective:900px;
+      cursor:pointer; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    .envelope .flap, .envelope .body, .envelope .seal{
+      position:absolute;
+      left:0;
+      right:0;
+      margin:auto
+    }
+    .envelope .flap{
+      top:0;
+      height:60px;
+      width:150px;
+      background:#e9e8f6;
+      border-radius:0 0 20px 20px; 
+      transform-origin:50% 0%; 
+      transform: rotateX(0); 
+      transition: transform .8s cubic-bezier(.2,.85,.32,1); 
+      box-shadow: 0 10px 25px rgba(100,40,120,0.06)
+    }
+    .envelope .body{
+      top:46px;
+      height:54px;
+      width:150px;
+      background:linear-gradient(180deg,#ffd8eb,#ffeaf6);
+      border-radius:0 0 20px 20px; 
+      box-shadow: 0 8px 22px rgba(120,60,140,0.06)
+    }
+    .envelope .seal{
+      top:28px;
+      width:44px;
+      height:44px;
+      border-radius:50%;
+      background:linear-gradient(180deg,#ff90aa,#ff6fa1);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:20px;
+      color:white;
+      box-shadow:0 6px 16px rgba(120,40,100,0.18);
+      transform-origin:center center; 
+      transition: transform .6s ease
+    }
+    .envelope.open .flap{transform: rotateX(88deg)}
+    .envelope.open .seal{transform: translateY(-10px) scale(.86)}
+
+    .open-btn{
+      margin-top:6px;
+      padding:10px 22px;
+      border-radius:24px;
+      border:none; 
+      background:var(--accent-1);
+      color:#fff;
+      font-weight:700;
+      cursor:pointer; 
+      box-shadow:0 6px 18px rgba(255,130,170,0.18);
+      transition: transform .18s ease, box-shadow .18s ease, opacity .3s ease; 
+      font-size:1rem;
+    }
+    .open-btn:active{transform:translateY(2px)}
+    .open-btn.hidden{
+      opacity:0;
+      transform:scale(.98);
+      pointer-events:none;
+      transition: opacity .3s ease, transform .3s ease;
+    }
+
+    /* letter modal styling inside overlay */
+    .letter-modal{
+      margin-top:6px; 
+      display:none; 
+      text-align:left; 
+      max-width:360px; 
+      padding:18px; 
+      border-radius:16px;
+      background: linear-gradient(180deg,#fff1f7,#fff6fb); 
+      box-shadow: 0 12px 40px rgba(80,28,80,0.12);
+    }
+    .letter-modal.show{
+      display:block; 
+      animation: popUp .45s cubic-bezier(.2,.85,.32,1)
+    }
+    @keyframes popUp{
+      from{transform:translateY(8px) scale(.96);opacity:0}
+      to{transform:none;opacity:1}
+    }
+    .letter-header,.letter-footer{
+      font-size:1.15rem;
+      text-align:center;
+      color:var(--deep);
+      margin-bottom:6px
+    }
+    .modal-close{
+      display:inline-flex; 
+      margin-left:auto; 
+      background:var(--accent-1); 
+      color:white; 
+      border:none;
+      border-radius:50%;
+      width:36px;
+      height:36px;
+      align-items:center;
+      justify-content:center;
+      font-size:20px;
+      cursor:pointer; 
+      box-shadow:0 6px 18px rgba(255,130,170,0.2)
+    }
+
+    /* Play buttons */
+    .play-btn{
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent-1);
+      color: white;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-left: 8px;
+      transition: transform .2s ease, box-shadow .2s ease;
+      box-shadow: 0 4px 12px rgba(255,144,170,0.2);
+    }
+    .play-btn:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(255,144,170,0.3);
+    }
+    .play-btn:active{
+      transform: translateY(0);
+    }
+    .play-all-btn{
+      margin-top: 12px;
+      padding: 8px 16px;
+      font-size: 1rem;
+      margin-left: 0;
+    }
+
+    /* content cards */
+    .music-card, .game-card, .poem-card, .msg-section, .msg-card{
+      margin: 18px 0; 
+      padding:14px; 
+      border-radius:14px; 
+      background:#f3f4fe; 
+      box-shadow: 0 6px 24px rgba(120,90,160,0.04);
+    }
+    .section-title{
+      font-family:Pacifico,cursive;
+      color:#51408b;
+      margin-bottom:8px
+    }
+    .song-list{
+      padding-left:0;
+      margin:0;
+      list-style:none
+    }
+    .song-list li{
+      margin:8px 0;
+      font-size:1.02rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .section-desc{
+      color: #7469aa;
+      font-style: italic;
+      margin-bottom: 12px;
+    }
+
+    /* message cards */
+    .msg-section{display:flex;gap:12px;flex-wrap:wrap}
+    .msg-card{
+      flex:1;
+      min-width:210px;
+      max-width:48%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:12px
+    }
+    .msg-bubble{
+      padding:8px 12px;
+      background:#e8ecff;
+      border-radius:12px;
+      margin-bottom:8px;
+      font-style:italic;
+      text-align: center;
+    }
+    .msg-caption{
+      color:#7469aa;
+      font-size:.92rem;
+      text-align: center;
+    }
+
+    .center{display:flex;align-items:center;justify-content:center}
+
+    /* Reveal stagger animation after overlay closes */
+    .reveal-stagger{
+      opacity:0; 
+      transform: translateY(14px) scale(.995); 
+      transition: opacity .6s ease, transform .6s ease
+    }
+    .reveal-stagger.visible{
+      opacity:1; 
+      transform:none
+    }
+
+    @media (max-width:720px){
+      .container{margin:18px 12px;padding:16px}
+      .msg-card{max-width:96%}
+      .img-placeholder.medium{width:96px;height:96px}
+    }
+
+    /* GAME styles */
+    .modal { 
+      position: fixed; 
+      left:0; 
+      top:0; 
+      width:100vw; 
+      height:100vh; 
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      z-index:2000; 
+      background: rgba(0,0,0,0.3);
+    }
+    .modal.hidden{ 
+      display:none; 
+    }
+    .modal-content{
+      background:#fff1f7;
+      border-radius:18px;
+      padding:18px;
+      min-width:260px;
+      box-shadow:0 12px 40px rgba(80,28,80,0.12);
+      position: relative;
+    }
+    #game-interface{ 
+      position: fixed; 
+      inset:0; 
+      display:none; 
+      align-items:center; 
+      justify-content:center; 
+      z-index:3000; 
+      background: linear-gradient(180deg, rgba(255,250,252,0.95), rgba(255,245,250,0.95)); 
+    }
+    #game-interface.visible{ 
+      display:flex; 
+    }
+    #game-box{ 
+      background: #fffafc; 
+      border-radius: 14px; 
+      padding: 16px; 
+      box-shadow: 0 12px 36px rgba(120,60,140,0.12); 
+      text-align:center; 
+      width: min(92vw,420px); 
+    }
+    #gameCanvas{ 
+      width: 100%; 
+      height: auto; 
+      max-height: 60vh; 
+      background: #ffeaf3; 
+      border-radius: 10px; 
+      display:block; 
+      margin: 8px auto; 
+      cursor: pointer;
+    }
+    #score{ 
+      font-size:1.05rem; 
+      color:#6b408b; 
+      margin-top:6px; 
+    }
+    #secret-message{ 
+      display:none; 
+      margin-top:12px; 
+      padding:14px; 
+      background:#fff1f7; 
+      border-radius:12px; 
+      color:#5f3f80; 
+      box-shadow: 0 8px 20px rgba(80,28,80,0.08); 
+      text-align:center; 
+    }
+    .game-btn{ 
+      padding:10px 14px; 
+      border-radius:12px; 
+      border:none; 
+      background:var(--accent-2); 
+      color:var(--deep); 
+      cursor:pointer; 
+      font-weight:700; 
+      margin:8px; 
+    }
+    .close-small{ 
+      background:var(--accent-1); 
+      color:#fff; 
+      border:none; 
+      padding:8px 12px; 
+      border-radius:10px; 
+      cursor:pointer; 
+    }
+    .start-game-btn{
+      background: var(--accent-1);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: transform .2s ease;
+    }
+    .start-game-btn:hover{
+      transform: translateY(-2px);
+    }
+    .poem-box{
+      padding:12px;
+      background:#fee8ff;
+      border-radius:12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ENVELOPE OVERLAY -->
+  <div id="overlay" class="overlay">
+    <div class="welcome-screen">
+      <div class="envelope-wrap">
+        <div id="ph-hello-kitty" class="img-placeholder medium" data-src="hello-kitty-bear.png" aria-label="Hello Kitty - placeholder">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <path d="M12 21s-6-4.5-9-9c-2-3 1-7 3-6 2 1 3 2 6 2s4-1 6-2c2-1 5 3 3 6-3 4.5-9 9-9 9z" fill="#ff90aa" opacity=".95"/>
+          </svg>
+          <div class="label">💖</div>
+        </div>
+
+        <div id="envelope" class="envelope" role="button" aria-label="Open envelope" tabindex="0">
+          <div class="flap"></div>
+          <div class="body"></div>
+          <div class="seal">💖</div>
+        </div>
+
+        <button id="openEnvelopeBtn" class="open-btn" onclick="openEnvelope()">✨ Click to open ✨</button>
+
+        <div id="letter-modal" class="letter-modal" role="dialog" aria-modal="true" aria-labelledby="letterTitle">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <strong id="letterTitle" style="font-size:1.1rem;">Dear Nannu</strong>
+            <button id="modalCloseBtn" class="modal-close" onclick="closeLetterModal()" title="Close & reveal page">×</button>
+          </div>
+
+          <div class="letter-body">
+            <p style="margin:0 0 10px 0; font-size:1rem; color:#5f4b86;">
+              "I want to say, from the depths of my heart, I miss you every moment and am sorry for my mistakes. You are my everything."
+            </p>
+            <p class="love" style="font-family:Pacifico;font-size:1.05rem;margin:0;color:#6e4fa8;">With all my love,<br> Your Star ✨</p>
+          </div>
+          <div class="letter-footer" style="margin-top:8px;">💙 💖 💜</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT (hidden until overlay closed) -->
+  <main id="main-content">
+    <div class="container" aria-live="polite">
+      <!-- Songs -->
+      <section class="card music-card reveal-stagger">
+        <div class="center" style="gap:10px;align-items:center">
+          <div class="img-placeholder small" id="ph-music-icon" data-src="music-icon.png" aria-hidden>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 19V6l12-2v13" stroke="#6b53b4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h2 class="section-title">Songs For You</h2>
+        </div>
+        <p class="section-desc">These tunes always remind me of us. ✨</p>
+        <ul class="song-list">
+          <li>
+            <span>🎧 Zara Zara</span>
+            <button class="play-btn" onclick="playMessage('Now playing: Zara Zara - Our special song! 💕')">▶</button>
+          </li>
+          <li>
+            <span>🌈 Tere Liye</span>
+            <button class="play-btn" onclick="playMessage('Now playing: Tere Liye - This one makes me think of you! 💖')">▶</button>
+          </li>
+          <li>
+            <span>🌹 Maand</span>
+            <button class="play-btn" onclick="playMessage('Now playing: Maand - So romantic, just like us! 🌹')">▶</button>
+          </li>
+        </ul>
+        <button class="play-all-btn play-btn" onclick="playMessage('Playing all our special songs! 🎵💕 Let the music remind you of all our beautiful moments together!')">Play All</button>
+      </section>
+
+      <!-- Game card -->
+      <section class="card game-card reveal-stagger">
+        <div class="center" style="flex-direction:column;gap:8px">
+          <div class="img-placeholder medium" id="ph-game-icon" data-src="game-heart.png" aria-hidden>
+            <svg width="44" height="44" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 21s-6-4.5-9-9c-2-3 1-7 3-6 2 1 3 2 6 2s4-1 6-2c2-1 5 3 3 6-3 4.5-9 9-9 9z" fill="#ff90aa"/>
+            </svg>
+          </div>
+          <h2>Play a Game!</h2>
+          <p>Collect hearts for a special surprise!</p>
+          <button class="start-game-btn" onclick="openGame()">Catch Hearts!</button>
+        </div>
+      </section>
+
+      <!-- Game modal (starter) -->
+      <div id="game-modal" class="modal hidden">
+        <div class="modal-content">
+          <button class="modal-close" onclick="closeGameModal()">×</button>
+          <h2>Catch Hearts & Kitty!</h2>
+          <p>Collect 15 hearts. Use left/right arrow keys or drag on mobile.</p>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
+            <button class="game-btn" onclick="startGame()">Start Game</button>
+            <button class="close-small" onclick="closeGameModal()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <section class="msg-section reveal-stagger">
+        <div class="msg-card">
+          <div class="msg-bubble">You know I miss you too much, it's very difficult to stay without you...</div>
+          <div id="ph-star-missyou" class="img-placeholder small" data-src="Starmissyou.png" aria-label="Love you Nannu placeholder">
+            <svg width="68" height="68" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 .587l3.668 7.431L24 9.748l-6 5.851L19.335 24 12 20.201 4.665 24 6 15.599 0 9.748l8.332-1.73L12 .587z" fill="#ffb6d8"/>
+            </svg>
+            <div class="label">⭐</div>
+          </div>
+          <div class="msg-caption">I hope you return soon.</div>
+        </div>
+
+        <div class="msg-card">
+          <div class="msg-bubble">I regret my careless mistakes and the pain they caused.</div>
+          <div id="ph-cat-warning" class="img-placeholder small" data-src="cat-warning.jpg" aria-label="Cat placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" fill="#caa3ff"/>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="#fff" stroke-width="2" fill="none"/>
+              <circle cx="9" cy="9" r="1" fill="#fff"/>
+              <circle cx="15" cy="9" r="1" fill="#fff"/>
+            </svg>
+            <div class="label">🐱</div>
+          </div>
+          <div class="msg-caption">I'm truly sorry and promise to do better.</div>
+        </div>
+      </section>
+
+      <!-- Poem -->
+      <section class="poem-card reveal-stagger">
+        <h2>Some Words ✨</h2>
+        <div class="poem-box">
+          <p style="margin:0;color:#6b558d;line-height:1.3">
+            You are a part of my life — without you there's no life.<br>
+            You are my world, my universe.<br>
+            I wish we come back together soon,<br>
+            Mere pyaare moon.<br><br>
+            Mere bache i miss you,<br>
+            please apna dhyan rkha kro.
+          </p>
+          <div style="margin-top:8px">💜 ✨ 💗</div>
+        </div>
+      </section>
+
+      <!-- Final -->
+      <section class="msg-section reveal-stagger">
+        <div class="msg-card">
+          <div class="msg-bubble">💙 "This is us, always."</div>
+          <div id="ph-kitty-batman" class="img-placeholder medium" data-src="kitty-batman-sunset.png" aria-label="Kitty and Batman placeholder">
+            <svg width="86" height="56" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="4" width="20" height="14" rx="3" fill="#d8b6ff"/>
+              <circle cx="8" cy="10" r="2" fill="#ff90aa"/>
+              <circle cx="16" cy="10" r="2" fill="#333"/>
+            </svg>
+            <div class="label">💕</div>
+          </div>
+          <div class="msg-caption">Don't be sad forever!</div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FULL GAME INTERFACE (appears when Start Game is pressed) -->
+  <div id="game-interface" aria-hidden="true">
+    <div id="game-box">
+      <div id="score">Score: 0 / 15</div>
+
+      <!-- Canvas: we keep a fixed internal resolution and scale with CSS for crisp drawing -->
+      <canvas id="gameCanvas" width="320" height="480"></canvas>
+
+      <div id="secret-message" aria-live="polite"></div>
+
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:10px;">
+        <button class="game-btn" id="restart-game">Play Again</button>
+        <button class="close-small" id="close-game">Close</button>
+      </div>
+      <p style="font-size:0.85rem;color:#7a5ea8;margin-top:8px;">Use ← → keys or drag on the canvas to move the basket.</p>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Overlay + Envelope logic ---------- */
+    const overlay = document.getElementById('overlay');
+    const envelope = document.getElementById('envelope');
+    const openBtn = document.getElementById('openEnvelopeBtn');
+    const letterModal = document.getElementById('letter-modal');
+    const main = document.getElementById('main-content');
+
+    // Add click event to envelope itself
+    envelope.addEventListener('click', openEnvelope);
+
+    envelope.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { 
+        e.preventDefault(); 
+        openEnvelope(); 
+      }
+    });
+
+    function openEnvelope(){
+      envelope.classList.add('open');
+      openBtn.classList.add('hidden');
+      setTimeout(()=>{
+        letterModal.classList.add('show');
+        const closeBtn = document.getElementById('modalCloseBtn');
+        closeBtn && closeBtn.focus();
+      }, 560);
+    }
+
+    function closeLetterModal(){
+      letterModal.classList.remove('show');
+      envelope.classList.remove('open');
+      overlay.classList.add('hidden');
+      setTimeout(()=>{
+        overlay.style.display = 'none';
+        revealMainContent();
+      }, 620);
+    }
+
+    function revealMainContent(){
+      main.classList.add('revealed');
+      const elems = main.querySelectorAll('.reveal-stagger');
+      elems.forEach((el, i) => {
+        setTimeout(()=> el.classList.add('visible'), i * 120 + 80);
+      });
+      attemptAutoReplacePlaceholders();
+      main.setAttribute('tabindex', '-1');
+      main.focus({preventScroll:true});
+    }
+
+    // Replace placeholders automatically if file exists relative to html path
+    function replacePlaceholderWithImage(placeholderId, src){
+      const ph = document.getElementById(placeholderId);
+      if(!ph) return console.warn('Placeholder not found', placeholderId);
+      const img = document.createElement('img');
+      img.src = src; 
+      img.alt = ph.getAttribute('aria-label') || '';
+      img.style.width = '100%'; 
+      img.style.height = 'auto'; 
+      img.style.borderRadius = '10px';
+      img.loading = 'lazy';
+      ph.parentNode.replaceChild(img, ph);
+    }
+
+    function attemptAutoReplacePlaceholders(){
+      document.querySelectorAll('.img-placeholder[data-src]').forEach(ph => {
+        const src = ph.getAttribute('data-src');
+        if(!src) return;
+        const img = new Image();
+        img.src = src;
+        img.onload = ()=> replacePlaceholderWithImage(ph.id, src);
+        // if image doesn't exist -> keep placeholder
+      });
+    }
+
+    // Play message function for music
+    function playMessage(message) {
+      alert(message);
+    }
+
+    // accessibility: close overlay with Escape
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape'){
+        if(!overlay.classList.contains('hidden')){
+          closeLetterModal();
+        } else if(!document.getElementById('game-modal').classList.contains('hidden')){
+          closeGameModal();
+        } else if(document.getElementById('game-interface').classList.contains('visible')){
+          closeGame();
+        }
+      }
+    });
+
+    window.addEventListener('load', ()=>{
+      const btn = document.getElementById('openEnvelopeBtn');
+      btn && btn.focus();
+    });
+
+    /* ---------- Game functionality ---------- */
+
+    // Modal that shows initial "Start Game" card
+    function openGame(){ 
+      document.getElementById('game-modal').classList.remove('hidden'); 
+    }
+
+    function closeGameModal(){ 
+      document.getElementById('game-modal').classList.add('hidden'); 
+    }
+
+    // Elements
+    const gameInterface = document.getElementById('game-interface');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const secretEl = document.getElementById('secret-message');
+    const restartBtn = document.getElementById('restart-game');
+    const closeGameBtn = document.getElementById('close-game');
+
+    // Game state
+    let hearts = [];
+    let score = 0;
+    const TARGET = 15;
+    let spawnInterval = null;
+    let animId = null;
+    let isPlaying = false;
+
+    // Basket properties (in canvas coordinates)
+    const BASKET_W = 64;
+    const BASKET_H = 22;
+    let basketX = (canvas.width - BASKET_W) / 2;
+
+    // Mouse/touch tracking
+    let isDragging = false;
+    let dragStartX = 0;
+
+    function drawBasket(){
+      ctx.fillStyle = '#ff90aa';
+      ctx.fillRect(basketX, canvas.height - BASKET_H - 10, BASKET_W, BASKET_H);
+
+      // Draw basket handle
+      ctx.strokeStyle = '#ff6fa1';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(basketX + BASKET_W/2, canvas.height - BASKET_H - 5, BASKET_W/2 + 5, Math.PI, 0);
+      ctx.stroke();
+    }
+
+    function drawHeart(x, y, size = 12) {
+      ctx.fillStyle = '#ff6fa1';
+      ctx.beginPath();
+      ctx.moveTo(x, y + size/4);
+      ctx.bezierCurveTo(x, y, x - size/2, y, x - size/2, y + size/4);
+      ctx.bezierCurveTo(x - size/2, y + size/2, x, y + size, x, y + size);
+      ctx.bezierCurveTo(x, y + size, x + size/2, y + size/2, x + size/2, y + size/4);
+      ctx.bezierCurveTo(x + size/2, y, x, y, x, y + size/4);
+      ctx.fill();
+    }
+
+    function spawnHeart(){
+      if (!isPlaying) return;
+      hearts.push({
+        x: Math.random() * (canvas.width - 20) + 10,
+        y: -20,
+        speed: 2 + Math.random() * 3,
+        size: 10 + Math.random() * 8
+      });
+    }
+
+    function updateGame(){
+      if (!isPlaying) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update and draw hearts
+      for(let i = hearts.length - 1; i >= 0; i--){
+        const heart = hearts[i];
+        heart.y += heart.speed;
+
+        drawHeart(heart.x, heart.y, heart.size);
+
+        // Check collision with basket
+        if (heart.y + heart.size > canvas.height - BASKET_H - 10 &&
+            heart.y < canvas.height - 10 &&
+            heart.x + heart.size > basketX &&
+            heart.x < basketX + BASKET_W) {
+          hearts.splice(i, 1);
+          score++;
+          updateScore();
+
+          if (score >= TARGET) {
+            winGame();
+            return;
+          }
+        }
+        // Remove hearts that fall off screen
+        else if (heart.y > canvas.height + 20) {
+          hearts.splice(i, 1);
+        }
+      }
+
+      drawBasket();
+      animId = requestAnimationFrame(updateGame);
+    }
+
+    function updateScore(){
+      scoreEl.textContent = `Score: ${score} / ${TARGET}`;
+    }
+
+    function winGame(){
+      isPlaying = false;
+      clearInterval(spawnInterval);
+      cancelAnimationFrame(animId);
+
+      secretEl.innerHTML = `
+        <h3>💖 You Won! 💖</h3>
+        <p>Congratulations! You caught ${TARGET} hearts!</p>
+        <p style="font-style: italic; color: #6b4f86;">
+          "Just like how you've captured all the hearts, you've captured mine completely. 
+          Every heart you caught represents how much I love you, Nannu. 
+          You are my everything, and I can't wait to hold you in my arms again!"
+        </p>
+        <p>💕 With all my love, Your Star ✨ 💕</p>
+      `;
+      secretEl.style.display = 'block';
+    }
+
+    function startGame(){
+      closeGameModal();
+      gameInterface.classList.add('visible');
+      gameInterface.setAttribute('aria-hidden', 'false');
+
+      // Reset game state
+      hearts = [];
+      score = 0;
+      basketX = (canvas.width - BASKET_W) / 2;
+      isPlaying = true;
+
+      updateScore();
+      secretEl.style.display = 'none';
+
+      // Start spawning hearts
+      spawnInterval = setInterval(spawnHeart, 800);
+      updateGame();
+    }
+
+    function restartGame(){
+      clearInterval(spawnInterval);
+      cancelAnimationFrame(animId);
+      startGame();
+    }
+
+    function closeGame(){
+      isPlaying = false;
+      clearInterval(spawnInterval);
+      cancelAnimationFrame(animId);
+      gameInterface.classList.remove('visible');
+      gameInterface.setAttribute('aria-hidden', 'true');
+    }
+
+    // Event listeners for game controls
+    document.addEventListener('keydown', (e) => {
+      if (!isPlaying) return;
+
+      if (e.key === 'ArrowLeft' && basketX > 0) {
+        basketX = Math.max(0, basketX - 20);
+      } else if (e.key === 'ArrowRight' && basketX < canvas.width - BASKET_W) {
+        basketX = Math.min(canvas.width - BASKET_W, basketX + 20);
+      }
+    });
+
+    // Mouse/Touch controls for canvas
+    canvas.addEventListener('mousedown', (e) => {
+      if (!isPlaying) return;
+      isDragging = true;
+      const rect = canvas.getBoundingClientRect();
+      dragStartX = e.clientX - rect.left;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging || !isPlaying) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const canvasMouseX = (mouseX / rect.width) * canvas.width;
+      basketX = Math.max(0, Math.min(canvas.width - BASKET_W, canvasMouseX - BASKET_W/2));
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // Touch events
+    canvas.addEventListener('touchstart', (e) => {
+      if (!isPlaying) return;
+      e.preventDefault();
+      isDragging = true;
+      const rect = canvas.getBoundingClientRect();
+      dragStartX = e.touches[0].clientX - rect.left;
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!isDragging || !isPlaying) return;
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touchX = e.touches[0].clientX - rect.left;
+      const canvasTouchX = (touchX / rect.width) * canvas.width;
+      basketX = Math.max(0, Math.min(canvas.width - BASKET_W, canvasTouchX - BASKET_W/2));
+    });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      isDragging = false;
+    });
+
+    // Button event listeners
+    restartBtn.addEventListener('click', restartGame);
+    closeGameBtn.addEventListener('click', closeGame);
+  </script>
+</body>
+</html>
